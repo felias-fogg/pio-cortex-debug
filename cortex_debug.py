@@ -3,6 +3,12 @@ import os
 import re
 Import("env")
 
+openocd_server_ready_regex =  "Listening on port \\d+ for gdb connection",
+openocd_extra_server_args = [ '-s', 'nop' ] 
+openocd_init_cmds = [ "monitor debugwire enable" ]
+
+print(env.BoardConfig().get('debug',{}).get('tools').get('pyavrocd', ""))
+
 def deb_tool():
     expl = env.GetProjectOption("debug_tool", default=None)
     if expl:
@@ -20,8 +26,8 @@ def deb_tool():
         return list(tools.keys())[0]
     
 
-def gen_entry(environment, executable, init_cmds, toolconfig, tc_dir, svdpath, serverpath,
-                  serverargs, regex):
+def gen_entry(environment, executable, toolconfig, tc_dir, svdpath, serverpath,
+                  serverargs):
     return {
             "name": "Cortex-Debug (" + environment + ")",
             "type": "cortex-debug",
@@ -32,14 +38,14 @@ def gen_entry(environment, executable, init_cmds, toolconfig, tc_dir, svdpath, s
             "configFiles": [
                 "nix"
             ],
-            "preLaunchCommands": init_cmds,
+            "preLaunchCommands": openocd_init_cmds,
             "gdbPath": os.path.join(tc_dir, env.get("GDB")),
             "objdumpPath": os.path.join(tc_dir, env.get("GDB").replace("-gdb","-objdump")),
             "serverpath": serverpath,
-            "overrideGDBServerStartedRegex": regex,
+            "overrideGDBServerStartedRegex": openocd_server_ready_regex,
             "svdFile": svdpath,
             "runToEntryPoint": "main",
-            "serverArgs": serverargs,
+            "serverArgs": serverargs + openocd_extra_server_args,
             "projectEnvName": environment,
             "preLaunchTask": {
                 "type": "PlatformIO",
@@ -48,7 +54,7 @@ def gen_entry(environment, executable, init_cmds, toolconfig, tc_dir, svdpath, s
         }
 
 def refresh_json(*args, **kwargs):
-    jsonfile = os.path.join(env.get('PROJECT_DIR', ''), ".vscode", "launch.json")
+    jsonfile = os.path.join(env.get('PROJECT_DIR',''), ".vscode", "launch.json")
     if os.path.exists(jsonfile):
         origjson = {}
         with open(jsonfile, "r", encoding="utf-8") as f:
@@ -63,10 +69,8 @@ def refresh_json(*args, **kwargs):
         server_path = os.path.join(package_dir, toolconfig.get('server', {}).get('package', ""),
                                        toolconfig.get('server', {}).get('executable', ""))
         server_args =  toolconfig.get('server', {}).get('arguments', [])
-        regex = toolconfig.get('server', {}).get('regex', "")
-        init_cmds = [ "monitor debugwire enable" ]
-        new_entry = gen_entry(environment, executable, init_cmds, toolconfig, toolchainbin_dir, svdpath,
-                                  server_path, server_args, regex)
+        new_entry = gen_entry(environment, executable, toolconfig, toolchainbin_dir, svdpath,
+                                  server_path, server_args)
         if tool != 'pyavrocd': # sorry, works only with pyavrocd 
             if origjson['configurations'][0]['type'] == 'cortex-debug':
                 del origjson['configurations'][0]
