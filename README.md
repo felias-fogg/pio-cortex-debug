@@ -8,8 +8,8 @@ After copying it to your project folder and declaring it as an extra script in y
 
 You need to refresh `launch.json` before you restart the debugger each time you have changed your default environment or changed the `platform.ini` file. 
 
-The script should be adaptable to other cases where one uses a GDB server that is compatible with Cortex-Debug, I believe. The assignment of the debug port, the handling of the debug_init_cmds and the setting of the server-ready regex is a bit tricky, however.  I chose the `openOCD` style of invoking Cortex-Debug. This means that Cortex-debug chooses the GDB port dynamically, uses it when invoking the server and uses it in the `target extends-remote` command. This means that this port should not be set (or ignored) and that the `init_cmds` needs to be different.
+The script should be adaptable to other cases where one uses a GDB server that is compatible with Cortex-Debug, I believe. The assignment of the debug port, the handling of the debug_init_cmds and the setting of the server-ready regex is a bit tricky, however.  I chose the `openOCD` style of invoking Cortex-Debug. This means that Cortex-debug chooses the GDB port dynamically, uses it when invoking the server and uses it in the `target extends-remote` command. For the GDB server arguments, this implies that this port should not be set (or ignored) and that the `init_cmds` need to be different. In order to parametrize the script, consider the three global variables set at the beginning of the script.
 
 Take the script as an inspiration if you want to use it for other MCU families and debug tools.
 
-[^*]: Although the extension is named Cortex-Debug, it is architecture-agnostic an plays well with other MCUs, such as the AVR family. 
+[^*]: Although the extension is named Cortex-Debug, it is architecture-agnostic and plays well with other MCUs, such as the AVR family. 
