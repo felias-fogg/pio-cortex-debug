@@ -1,13 +1,21 @@
 import json
 import os
 import re
+import sys
 Import("env")
 
-openocd_server_ready_regex =  "Listening on port \\d+ for gdb connection",
+openocd_server_ready_regex =  "Listening on port \\d+ for gdb connection"
 openocd_extra_server_args = [ '-s', 'nop' ] 
 openocd_init_cmds = [ "monitor debugwire enable" ]
 
 print(env.BoardConfig().get('debug',{}).get('tools').get('pyavrocd', ""))
+
+def exe_file_name(path):
+    if path.endswith(".exe") or path.endswith(".EXE"):
+        return path
+    if sys.platform.startswith("win"):
+        return path + ".exe"
+    return path
 
 def deb_tool():
     expl = env.GetProjectOption("debug_tool", default=None)
@@ -24,10 +32,9 @@ def deb_tool():
             if tools[x].get("default", False):
                 return x
         return list(tools.keys())[0]
-    
 
-def gen_entry(environment, executable, toolconfig, tc_dir, svdpath, serverpath,
-                  serverargs):
+def gen_entry(environment, executable, toolconfig, tc_dir, svdpath,
+                  gdb_path, serverpath, serverargs):
     return {
             "name": "Cortex-Debug (" + environment + ")",
             "type": "cortex-debug",
@@ -39,9 +46,9 @@ def gen_entry(environment, executable, toolconfig, tc_dir, svdpath, serverpath,
                 "nix"
             ],
             "preLaunchCommands": openocd_init_cmds,
-            "gdbPath": os.path.join(tc_dir, env.get("GDB")),
-            "objdumpPath": os.path.join(tc_dir, env.get("GDB").replace("-gdb","-objdump")),
-            "serverpath": serverpath,
+            "gdbPath": exe_file_name(gdb_path),
+            "objdumpPath": exe_file_name(os.path.join(tc_dir,"avr-objdump")),
+            "serverpath": exe_file_name(serverpath),
             "overrideGDBServerStartedRegex": openocd_server_ready_regex,
             "svdFile": svdpath,
             "runToEntryPoint": "main",
@@ -66,10 +73,13 @@ def refresh_json(*args, **kwargs):
         svdpath =  origjson['configurations'][-1].get('svdPath', '')
         tool = deb_tool()
         toolconfig = env.BoardConfig().get('debug',{}).get('tools').get(tool, "")
+        gdb_path = os.path.join(package_dir, toolconfig.get('server', {}).get('package', ""),
+                                    "avr-gdb")
         server_path = os.path.join(package_dir, toolconfig.get('server', {}).get('package', ""),
                                        toolconfig.get('server', {}).get('executable', ""))
         server_args =  toolconfig.get('server', {}).get('arguments', [])
-        new_entry = gen_entry(environment, executable, toolconfig, toolchainbin_dir, svdpath,
+        new_entry = gen_entry(environment, executable, toolconfig,
+                                  toolchainbin_dir, svdpath, gdb_path,
                                   server_path, server_args)
         if tool != 'pyavrocd': # sorry, works only with pyavrocd 
             if origjson['configurations'][0]['type'] == 'cortex-debug':
